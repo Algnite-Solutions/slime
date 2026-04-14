@@ -247,6 +247,12 @@ class Dataset:
             else:
                 multimodal_inputs = None
 
+            # PrefixRL: store teacher prefix in metadata for injection during rollout
+            if 'prefix' in data and data['prefix']:
+                prefix_val = data['prefix']
+                if isinstance(prefix_val, str) and len(prefix_val.strip()) > 0:
+                    metadata['prefix'] = prefix_val.strip()
+
             origin_samples.append(
                 Sample(
                     prompt=output_prompt,

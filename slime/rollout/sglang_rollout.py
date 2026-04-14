@@ -243,6 +243,24 @@ async def generate_and_rm(
     sampling_params: dict[str, Any],
     evaluation: bool = False,
 ) -> Sample | list[Sample]:
+    # PrefixRL: inject teacher prefix into sample before generation
+    # The prefix is pre-tokenized and set as the initial response so that
+    # partial_rollout masks it from the loss. Only the model's continuation is trained.
+    if (not evaluation
+        and args.partial_rollout
+        and isinstance(sample, Sample)
+        and sample.response_length == 0
+        and sample.metadata.get('prefix')):
+        prefix_text = sample.metadata['prefix']
+        state = GenerateState(args)
+        prefix_tokens = state.tokenizer.encode(prefix_text, add_special_tokens=False)
+        prompt_ids = _prepare_prompt_ids(sample, state.tokenizer, state.processor)
+        sample.tokens = prompt_ids + prefix_tokens
+        sample.response = prefix_text
+        sample.response_length = len(prefix_tokens)
+        sample.rollout_log_probs = [0.0] * len(prefix_tokens)
+        logger.info(f"PrefixRL: injected {len(prefix_tokens)} prefix tokens for problem {sample.group_index}")
+
     # mask previous off-policy generation for partial rollout
     if args.partial_rollout and args.mask_offpolicy_in_partial_rollout and sample.response_length > 0:
         sample.loss_mask = [0] * sample.response_length
