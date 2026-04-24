@@ -10,7 +10,7 @@ from slime.utils.misc import load_function
 from slime.utils.types import Sample
 
 from .deepscaler import get_deepscaler_rule_based_reward
-from .f1 import f1_score
+from .f1 import f1_score, normalize_answer
 from .gpqa import compute_gpqa_reward
 from .math_dapo_utils import compute_score as compute_score_dapo
 from .math_utils import extract_answer as extract_boxed_answer
@@ -75,6 +75,8 @@ async def async_rm(args, sample: Sample, **kwargs):
         return compute_score_dapo(response, label)
     elif rm_type == "math":
         return 1 if grade_answer_verl(response, label) else 0
+    elif rm_type == "em":
+        return 1.0 if normalize_answer(response) == normalize_answer(label) else 0.0
     elif rm_type == "f1":
         return f1_score(response, label)[0]
     elif rm_type == "gpqa":
